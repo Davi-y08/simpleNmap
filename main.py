@@ -116,6 +116,89 @@ class Nmap:
 
         for f in found:
             print(f)
+    
+    def scan_specific_doors(self, target, doors):
+        string_doors = ""
+
+        string_doors = ",".join(str(d) for d in doors) 
+
+        result = subprocess.run(
+            ["nmap", "-p", string_doors, target],
+            capture_output=True,
+            text=True,
+            encoding="utf-8"
+        )
+
+        if result.returncode != 0:
+            print("command error")
+            print(result.stderr)
+            return
+
+        output = result.stdout
+
+        if not output.strip():
+            print("no response of nmap")
+            return
+        
+        found_doors = []
+
+        for line in result.stdout.splitlines():
+            for door in doors:
+                    if line.startswith(f"{door}/"):
+                        parts = line.split()
+                        port = parts[0]
+                        found_doors.append(port)
+        
+        if not found_doors:
+            print("no door open")
+            return
+        
+        for f in found_doors:
+            print(f)
+
+    def scan_doors_in_range(self, begin, end, target):
+        target_doors = []
+        
+        if begin > end:
+            print("error in range specific")
+            return
+
+        for i in range(begin, end + 1):
+            target_doors.append(i)
+            
+        string_doors = ",".join(str(d) for d in target_doors)   
+        
+        result = subprocess.run(
+            ["nmap", "-p", string_doors, target],
+            capture_output=True,
+            text=True,
+            encoding="utf-8"
+        )
+
+        if result.returncode != 0:
+            print("command error")
+            print(result.stderr)
+            return
+
+        if not result.stdout.strip():
+            print("nmap no responses")
+            return
+
+        founds_doors_open = []
+
+        for line in result.stdout.splitlines():
+            for door in target_doors:
+                if line.startswith(f"{door}/"):
+                    parts = line.split()
+                    door = parts[0]
+                    founds_doors_open.append(door)
+
+        if not founds_doors_open:
+            print("no doors open in range")
+            return
+
+        for door in founds_doors_open:
+            print(door) 
 
 nmap = Nmap()
 
