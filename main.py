@@ -26,7 +26,7 @@ class Nmap:
                 ip = parts[1]
                 found.append(ip)
         
-        print("\nDispositivos na sua rede: ")
+        print("\Devices in your network: ")
         for device in found:
             print("Device: ", device)
     
@@ -46,7 +46,7 @@ class Nmap:
                     porta = parts[0]
                     founds.append(porta)
 
-        print("Portas abertas no alvo: ")
+        print("Open doors in the target: ")
         for found in founds:
             print(found)
 
@@ -206,7 +206,7 @@ ready_commands = {
     "disp_scan": "-sn"
 }
 
-options = ["Dispositivos ativos na sua rede", "Identificar portas abertas", ""]
+options = ["Active devices in yout network", "Identify open doors", ""]
 operational_system = platform.system()
 
 def print_main_screen():
@@ -215,7 +215,7 @@ def print_main_screen():
 
 def print_options():
     print("|-------------------------------------------------------------|")
-    print("Insira uma opção abaixo: ")
+    print("Enter an option below: ")
 
     tam = len(options)
     i = 0
@@ -229,15 +229,15 @@ def define_target():
    exit_target = False
    target = ""
    while not exit_target:
-    target = input("insira um alvo ( 0 para sair ): ")
+    target = input("Enter a target (0 to exit): ")
     if not target:
-           print("inválido")
+           print("Invalid")
     else:
         return target
 
 def identify_choose(ipt):
     if ipt == 0:
-        print("Volte sempre!")
+        print("Come back often!")
         return True
     elif ipt == 1:
         gateway = netifaces.gateways()["default"][netifaces.AF_INET][0]
@@ -247,18 +247,18 @@ def identify_choose(ipt):
         print("\ndoor scanner")
         target = define_target()
 
-        intern_options = ["fast scan", "default scan", "detailed scan", "specific doors", "door range"]
+        intern_options = ["Fast scan", "Default scan", "Detailed scan", "Specific doors", "Door range"]
         i = 0
         for options in intern_options:
             i+=1
             print(f"{i} - {options}")
 
-        intern_option_string = input("enter a option (0 to exit): ") 
+        intern_option_string = input("Enter a option (0 to exit): ") 
         opcao = -1
         try:
             opcao = int(intern_option_string)
         except ValueError:
-            print("enter data correctly")
+            print("Enter data correctly")
             return 
         
         if opcao == 1:
@@ -276,17 +276,17 @@ def nmap_is_installed():
     if shutil.which("nmap"):
         return
     else:
-        print("Por favor, instale o nmap")
+        print("Please, install the nmap")
 
 print_main_screen()
 nmap_is_installed()
 print_options()
 
 while not sair:
-    user_input_str = input("Insira uma opção: ")
+    user_input_str = input("Enter a option: ")
     try:
         result = identify_choose(int(user_input_str))
         sair = result
 
     except ValueError:  
-        print("Insira os dados corretamente")
+        print("Enter data correctly")
