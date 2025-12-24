@@ -1,212 +1,32 @@
-import os
 import pyfiglet #pip
 import platform
 import shutil
 import netifaces #pip
-import subprocess
+from modules import Nmap
+from modules import scrape_subdomain
+from pathlib import Path
+
+Colors = {
+    'RESET': '\033[0m',
+    'RED': '\033[31m',
+    'GREEN': '\033[32m',
+    'YELLOW': '\033[33m',
+    'BLUE': '\033[34m',
+    'MAGENTA': '\033[35m',
+    'CYAN': '\033[36m',
+    'WHITE': '\033[37m',
+}
 
 sair = False
-
-class Nmap:
-    def __init__(self, command = None):
-        self.command = command
-
-    def scan_devices_on_network(self, target):
-        result = subprocess.run(
-        ["nmap", "-sn", "-oG", "-", target],
-        capture_output=True,
-        text=True
-        )
-
-        found = []
-
-        for line in result.stdout.splitlines():
-            if line.startswith("Host:") and "Status: Up" in line:
-                parts = line.split()
-                ip = parts[1]
-                found.append(ip)
-        
-        print("\Devices in your network: ")
-        for device in found:
-            print("Device: ", device)
-    
-    def indetity_ports_in_a_target(self, target, ports):
-        result = subprocess.run(
-            ["nmap", target],
-            capture_output=True,
-            text=True,
-            encoding="utf-8"
-        )
-        #essa merda funciona por incrivel que pareça
-        founds = []
-        for line in result.stdout.splitlines():
-            for port in ports:
-                if line.startswith(f"{port}/"):
-                    parts = line.split()
-                    porta = parts[0]
-                    founds.append(porta)
-
-        print("Open doors in the target: ")
-        for found in founds:
-            print(found)
-
-    def fast_doors_scan(self, target, ports):
-        result = subprocess.run(
-            ["nmap", "-F", target],
-            capture_output=True,
-            text=True,
-            encoding="utf-8"
-        )
-
-        if result.returncode != 0:
-            print("command error")
-            print(result.stderr)
-            return
-        
-        output = result.stdout
-
-        if not output.strip():
-            print("nmap return nothing")
-            return
-
-        found = []
-        for line in result.stdout.splitlines():
-            for port in ports:
-                if line.startswith(f"{port}/"):
-                    parts = line.split()
-                    porta = parts[0]
-                    found.append(porta)
-        
-        if not found:
-            print("no door open")
-            return
-
-        for f in found:
-            print(f)
-
-    def detailed_door_scan(self, target, ports):
-        result = subprocess.run(
-            ["nmap", "-p-", target],
-            capture_output=True,
-            text=True,
-            encoding="utf-8"
-        )
-
-        if result.returncode != 0:
-            print("command error")
-            print(result.stderr)
-            return
-        
-        output = result.stdout
-
-        if not output.strip():
-            print("nmap return nothing")
-            return
-    
-        found = []
-        for line in result.stdout.splitlines():
-            for port in ports:
-                if line.startswith(f"{port}/"):
-                    parts = line.split()
-                    porta = parts[0]
-                    found.append(porta)
-        if not found:
-            print("no door open")
-            return
-
-        for f in found:
-            print(f)
-    
-    def scan_specific_doors(self, target, doors):
-        string_doors = ""
-
-        string_doors = ",".join(str(d) for d in doors) 
-
-        result = subprocess.run(
-            ["nmap", "-p", string_doors, target],
-            capture_output=True,
-            text=True,
-            encoding="utf-8"
-        )
-
-        if result.returncode != 0:
-            print("command error")
-            print(result.stderr)
-            return
-
-        output = result.stdout
-
-        if not output.strip():
-            print("no response of nmap")
-            return
-        
-        found_doors = []
-
-        for line in result.stdout.splitlines():
-            for door in doors:
-                    if line.startswith(f"{door}/"):
-                        parts = line.split()
-                        port = parts[0]
-                        found_doors.append(port)
-        
-        if not found_doors:
-            print("no door open")
-            return
-        
-        for f in found_doors:
-            print(f)
-
-    def scan_doors_in_range(self, begin, end, target):
-        target_doors = []
-        
-        if begin > end:
-            print("error in range specific")
-            return
-
-        for i in range(begin, end + 1):
-            target_doors.append(i)
-            
-        string_doors = ",".join(str(d) for d in target_doors)   
-        
-        result = subprocess.run(
-            ["nmap", "-p", string_doors, target],
-            capture_output=True,
-            text=True,
-            encoding="utf-8"
-        )
-
-        if result.returncode != 0:
-            print("command error")
-            print(result.stderr)
-            return
-
-        if not result.stdout.strip():
-            print("nmap no responses")
-            return
-
-        founds_doors_open = []
-
-        for line in result.stdout.splitlines():
-            for door in target_doors:
-                if line.startswith(f"{door}/"):
-                    parts = line.split()
-                    door = parts[0]
-                    founds_doors_open.append(door)
-
-        if not founds_doors_open:
-            print("no doors open in range")
-            return
-
-        for door in founds_doors_open:
-            print(door) 
-
 nmap = Nmap()
 
 ready_commands = {
     "disp_scan": "-sn"
 }
 
-options = ["Active devices in yout network", "Identify open doors", ""]
+BASE_DIR = Path(__file__).resolve().parent
+
+options = ["Active devices in yout network", "Identify open doors", "Subdomains scraper"]
 operational_system = platform.system()
 
 def print_main_screen():
@@ -224,6 +44,11 @@ def print_options():
         print(i, "-", option)
 
     print("|-------------------------------------------------------------|")
+
+def load_doors(relative_path):
+    path = BASE_DIR / relative_path
+    return [int(p.strip()) for p in path.read_text().split(",") if p.strip()]
+
 
 def define_target():
    exit_target = False
@@ -262,15 +87,17 @@ def identify_choose(ipt):
             return 
         
         if opcao == 1:
-            ports = open("fast_door_scan.txt").read().strip().split(", ")
-            nmap.fast_doors_scan(target, ports)
+            nmap.fast_doors_scan(target, doors=load_doors("txtlist/fast_door_scan.txt"))
         elif opcao == 2:
-            ports = open("ports.txt").read().strip().split(",")
-            nmap.indetity_ports_in_a_target()
+            nmap.indetify_doors_in_target(target=target, doors=load_doors("txtlist/ports.txt"))
         elif opcao == 3:
-            ports = open("all_ports.txt").read().strip().split(", ")
-            nmap.detailed_door_scan(target, ports)
-    
+            nmap.detailed_door_scan(target, ports=load_doors("txtlist/all_ports.txt"))
+
+    elif ipt == 3:
+        print("\nsubdomain scaner")
+        target = define_target()
+        
+        scrape_subdomain(target)
 
 def nmap_is_installed():
     if shutil.which("nmap"):
