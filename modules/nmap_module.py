@@ -14,6 +14,31 @@ class Nmap:
     def __init__(self, command = None):
         self.command = command
 
+    def _parse_on_detection(self, output):
+        os_info = []
+
+        for line in output.stdout.splitlines():
+            line = line.strip()
+
+            if line.startswith("Running:"):
+                os_info.append(line.replace("Running:", "").strip())
+
+            elif line.startswith("OS details:"):
+                os_info.append(line.replace("OS details:", "").strip())
+
+            elif line.startswith("Aggressive OS guesses:"):
+                os_info.append(line.replace("Aggressive OS guesses:", "").strip())
+
+        return os_info
+
+    def print_doors(self, doors):
+        if not doors:
+            print("no doors open")
+            return
+        
+        for door in doors:
+            print(door)
+
     def _door_scan_result_aux(self, output, doors):
         founds = []
         for line in output.stdout.splitlines(): #percorrer cada linha, onde o stdout quebra os '\n' deixando em linha unica, e com o splitlines para separar linha por linha
@@ -24,6 +49,19 @@ class Nmap:
                     founds.append(door_aux)
 
         return founds
+
+    def _verify_response(self, result):
+        if result.returncode != 0:
+            print("command error")
+            print(result.stderr)
+            return
+        
+        output = result.stdout
+
+        if not output.strip():
+            print("nmap return nothing")
+            return
+
     
     def scan_devices_on_network(self, target):
         result = subprocess.run(
@@ -56,10 +94,7 @@ class Nmap:
         #essa merda funciona por incrivel que pareça
         
         founds = self._door_scan_result_aux(output=result, doors=doors)
-
-        print("Open doors in the target: ")
-        for found in founds:
-            print(found)
+        self.print_doors(founds)
 
     def fast_doors_scan(self, target, doors):
         result = subprocess.run(
@@ -69,25 +104,9 @@ class Nmap:
             encoding="utf-8"
         )
 
-        if result.returncode != 0:
-            print("command error")
-            print(result.stderr)
-            return
-        
-        output = result.stdout
-
-        if not output.strip():
-            print("nmap return nothing")
-            return
-
+        self._verify_response(result)
         founds = self._door_scan_result_aux(output=result, doors=doors)
-        
-        if not founds:
-            print(f"{Colors['RED']}no door open{Colors['RESET']}")
-            return
-
-        for door in founds:
-            print(door)
+        self.print_doors(founds)
 
     def detailed_door_scan(self, target, doors):
         result = subprocess.run(
@@ -97,25 +116,9 @@ class Nmap:
             encoding="utf-8"
         )
 
-        if result.returncode != 0:
-            print("command error")
-            print(f"{Colors['RED']} {result.stderr} {Colors['RESET']}")
-            return
-        
-        output = result.stdout
-
-        if not output.strip():
-            print("nmap return nothing")
-            return
-    
+        self._verify_response(result)
         founds = self._door_scan_result_aux(output=result, doors=doors)
-
-        if not founds:
-            print("no door open")
-            return
-
-        for door in founds:
-            print(door)
+        self.print_doors(founds)
     
     def scan_specific_doors(self, target, doors):
         string_doors = ""
@@ -128,25 +131,9 @@ class Nmap:
             encoding="utf-8"
         )
 
-        if result.returncode != 0:
-            print("command error")
-            print(result.stderr)
-            return
-
-        output = result.stdout
-
-        if not output.strip():
-            print("no response of nmap")
-            return
-        
+        self._verify_response(result)
         founds = self._door_scan_result_aux(output=result, doors=doors)
-        
-        if not founds:
-            print("no door open")
-            return
-        
-        for f in founds:
-            print(f)
+        self.print_doors(founds)
 
     def scan_doors_in_range(self, begin, end, target):
         target_doors = []
@@ -167,20 +154,24 @@ class Nmap:
             encoding="utf-8"
         )
 
-        if result.returncode != 0:
-            print("command error")
-            print(result.stderr)
-            return
-
-        if not result.stdout.strip():
-            print("nmap no responses")
-            return
-
+        self._verify_response(result)
         founds = self._door_scan_result_aux(output=result, doors=target_doors)
+        self.print_doors(founds) 
+    
+    def detect_os(self, target):
+        result = subprocess.run(
+            ["nmap", "-O", str(target)],
+            capture_output=True,
+            text=True,
+            encoding="utf-8"
+        )
+        
+        self._verify_response(result)
+        
+        os_list = self._parse_on_detection(output=result)
 
-        if not founds:
-            print("no doors open in range")
-            return
+        if not os_list:
+            print(f"{Colors['RED']}OS not detected{Colors['RESET']}")
 
-        for door in founds:
-            print(door) 
+        for os in os_list:
+            print(f" - {Colors['BLUE']}OS: {os}{Colors['RESET']}")

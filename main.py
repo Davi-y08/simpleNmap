@@ -5,6 +5,12 @@ import netifaces #pip
 from modules import Nmap
 from modules import scrape_subdomain
 from pathlib import Path
+import os
+
+if os.name == 'nt':
+    os.system('cls')
+else:
+    os.system('clear')
 
 Colors = {
     'RESET': '\033[0m',
@@ -26,24 +32,21 @@ ready_commands = {
 
 BASE_DIR = Path(__file__).resolve().parent
 
-options = ["Active devices in yout network", "Identify open doors", "Subdomains scraper"]
+options = [f"Active devices in your network", "Identify open doors", "OS Detector"]
 operational_system = platform.system()
 
 def print_main_screen():
-    result = pyfiglet.figlet_format("simple nmap")
-    print(result)    
+    ascii_text = pyfiglet.figlet_format("simple nmap")
+    print(f"{Colors['CYAN']}{ascii_text}{Colors['RESET']}")   
 
 def print_options():
-    print("|-------------------------------------------------------------|")
-    print("Enter an option below: ")
-
-    tam = len(options)
+    print(f"{Colors['MAGENTA']}Enter an option below: \n{Colors['RESET']}")
     i = 0
     for option in options:
         i+=1
-        print(i, "-", option)
+        print(f"{Colors['CYAN']}{i} - {option}{Colors['RESET']}")
+    print("\n")
 
-    print("|-------------------------------------------------------------|")
 
 def load_doors(relative_path):
     path = BASE_DIR / relative_path
@@ -94,10 +97,9 @@ def identify_choose(ipt):
             nmap.detailed_door_scan(target, ports=load_doors("txtlist/all_ports.txt"))
 
     elif ipt == 3:
-        print("\nsubdomain scaner")
+        print("\OS detector")
         target = define_target()
-        
-        scrape_subdomain(target)
+        nmap.detect_os(target)
 
 def nmap_is_installed():
     if shutil.which("nmap"):
